@@ -1,0 +1,72 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "how sonic.Marshal works?",
+  "steps": [
+    {
+      "file": "api.go",
+      "description": "API is very user-friendly, it's the same as go encoding/json.Marshal, \nso you can just change the importPath from encoding/json to github.com/bytedance/sonic.",
+      "line": 152
+    },
+    {
+      "file": "api.go",
+      "description": "sonic.Config has some flags to control the behavior during JSON parsing and generating,\nsonic.ConfigDefault is the default flags set, which aims at safety and efficiency.\n\nif you want to be compatible with go encoding/json behavior, use sonic.ConfigStd instead.",
+      "line": 153
+    },
+    {
+      "file": "sonic.go",
+      "description": "Froze converts the Config (has serveral flags) to API, which is an interface{},\nthen the exported methods is limited to the API, so as to hide the internals of Config.\n\nHere, the flags EscapeHTML, SortMapKeys, ... are also appeared in go encoding/json.\nThis kind of logic maybe heavy if JSON data is complex or large, but in go encoding/json \nyou may not control this... so, if we can control this, it's more flexible.",
+      "line": 39
+    },
+    {
+      "file": "internal/encoder/encoder.go",
+      "description": "Here's the topmost encode logic, it encode the `val` according to `opts`",
+      "line": 178
+    },
+    {
+      "file": "internal/encoder/encoder.go",
+      "description": "allocate a buffer from sync.Pool to store the encoded JSON text,\nthe initial buffer size is 128KB which is large enough for most cases.\n\nWell if the buffer capacity is expanded, it won't be shrinked when putting back into the sync.Pool.\n\nSo, do we need to shrink this capcacity? Will GC be able to recycle the underlying memory when after we do `p=p[:0]`. No! `p=p[:0]` only change the length of p to 0, but the capacity remains the same.\n\nSo, if there's 1/100 requests which has huge JSON data to parse, but 99/100 requests which has small JSON data to parse. This strategy used here (`p=p[:0]`) may cause a higher memory consumption at 99% time, which is not so good.",
+      "line": 181
+    },
+    {
+      "file": "internal/encoder/encoder.go",
+      "description": "TODO don't know why we need a stack?",
+      "line": 223
+    },
+    {
+      "file": "internal/encoder/encoder.go",
+      "description": "The real value is packed into a empty interface, here we need to unpack it.\nAfter unpacking, we can get the dynamic type and dynamic value. \nThen determine all the encoders/decoders for each JSON element types.\n\nFor example, different type has its own function for encoding/decoding, \nwe should recursively analyze the go struct and its fields, even nested structs,\nso as to get all needed encoders/decoders for the types appeared in its definition.\n\nIn go encoding/json, it does the same logic, too. Analyze the struct, find all encoders/decoders, and cache them to avoid duplicate processing.\n\nBut go encoding/json neglects the costs about lots of function calls when marshaling/unmarshaling complex datatype. bytedance/sonic uses JIT (Just-In-Time) compiler to \ncompile the whole topmost encode/decode logic (which contains lots of calls into \ncached encoders/decoders) into golang asm, which improves the performance a lot.\n\n",
+      "line": 224
+    },
+    {
+      "file": "internal/encoder/primitives.go",
+      "description": "encode: encode nil to JSON null literal",
+      "line": 70
+    },
+    {
+      "file": "internal/encoder/primitives.go",
+      "description": "encode: here findOrCompile will try to find the _Encoder function for type `vt`.\n\nIf found 1 existed _Encoder from the cache, then use it directly.\nIf not found, then we should compute and compile all encode logic to golang asm, the _Encoder.\n\nThen use it to encode:\n- if vt is pointer to type, then `err := fn(buf, *vp, sb, fv)`\n- if vt is not pointer, then `err := fn(buf, unsafe.Pointer(vp), sb, fv)`",
+      "line": 72
+    },
+    {
+      "file": "internal/caching/pcache.go",
+      "description": "compute the _Encoder for `vt`, how to compute? use `compute` function.\n\nHere, `compute` is function `makeEncoder(vt *rt.GoType, ex ...interface{}) (interface{}, error)`",
+      "line": 152,
+      "selection": {
+        "start": {
+          "line": 1,
+          "character": 1
+        },
+        "end": {
+          "line": 1,
+          "character": 74
+        }
+      }
+    },
+    {
+      "file": "internal/caching/pcache.go",
+      "description": "Here, ProgramCache is RCU-based cache, so Read-Copy-Update ... the cache.",
+      "line": 171
+    }
+  ],
+  "ref": "dev"
+}
