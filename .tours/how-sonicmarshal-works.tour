@@ -66,6 +66,56 @@
       "file": "internal/caching/pcache.go",
       "description": "Here, ProgramCache is RCU-based cache, so Read-Copy-Update ... the cache.",
       "line": 171
+    },
+    {
+      "file": "internal/encoder/pools.go",
+      "description": "`makeEncoder`, to create an encode function to encode the `vt`,\nthis encode function will be Just-in-Time compiled into ASM instructions,\nwhich can be called directly by go.\n\nAnd this encode function is put onto heap, it's cached for reuse later.\n\nCompared with go encoding/json, it compile the whole encode logic into a function,\nrather than using lots of reflection to inspect each element and then call relevant encoders.\n\nThis optimization helps a lot!\n\n`makeEncoder`, first call `pp, err := newCompiler().compile(...)` to create an encode function (intermediate instructions) to encode `vt`,\nthen it call `newAssembler(pp).Load()` to assemble the intermediate instructions to native instructions.",
+      "line": 133
+    },
+    {
+      "file": "internal/encoder/assembler_regabi_amd64.go",
+      "description": "`(*_Assembler).compile()` converts the intermediate instructions to amd64 native instructions. These instructions is the encode function, which can be called.\n\nSo you can see, it put all encoders (functions) in go encoding/json for different element types into one single function. By this way, the function call cost is eliminated.\n\nps: And in previous go versions, the function call passes arguments by stack memory rather than registers, it's slow.",
+      "line": 205
+    },
+    {
+      "file": "internal/encoder/compiler.go",
+      "description": "`compile` create the _Encoder function and compile it into ASM instructions",
+      "line": 431
+    },
+    {
+      "file": "internal/encoder/compiler.go",
+      "description": "`compileOne` dives into the darkness",
+      "line": 433
+    },
+    {
+      "file": "internal/encoder/compiler.go",
+      "description": "`compileRec` dives into the darkness.",
+      "line": 441
+    },
+    {
+      "file": "internal/encoder/compiler.go",
+      "description": "The logic flow is:\n\n- check kind of `vt`\n  - if value type, marshal directly\n  - if pointer type\n    - emit is_nil check\n    - if not nil, emit marshal opcode\n    - if nil, emit null instead",
+      "line": 867
+    },
+    {
+      "file": "internal/encoder/compiler.go",
+      "description": "`compileRec` dives into the darkness, `vt` and pointer receiver `pt := reflect.PtrTo(vt)`,\nthen detects the type of `vt` and `pt`:\n\nimplements interface json.Marshaler:\n- if pointer dereference enabled (recursive), `pt` implements json.Marshaler, then emit `_OP_marshal_p pt` instruction.\n- if `vt` itself implements json.Marshaler\n  - it will check if `vt` is nil\n    - if so, emit `null` instruction\n    - if not, emit `_OP_marshal vt` instruction\n\nimplements interface encoding.TextMarshaler:\n- if pointer dereference enabled (recursive), and `pt` implements encoding.TextMarshaler, emit `_OP_marshal_text_p pt`  instruction\n- if `vt` itself implemnts encoding.TextMarshaler\n  - if will check if `vt` is nil\n    - if so, emit `null` instruction\n    - if not, emit `_OP_marshal_text vt` instruction",
+      "line": 445
+    },
+    {
+      "file": "internal/encoder/compiler.go",
+      "description": "`compileOps` add encode instructions for datatypes that doesn't implement json.Marshaler or encoding.TextMarshaler.\n\nSo far, we have added encode functions (instructions) for all kinds of datatypes.\n\n",
+      "line": 476
+    },
+    {
+      "file": "internal/encoder/compiler.go",
+      "description": "For ordinary value like bool, (u)int, uintptr, float, just encode them directly.\nThere's no such apparent optimization here.",
+      "line": 485
+    },
+    {
+      "file": "internal/encoder/compiler.go",
+      "description": "For string, array, interface, map, ptr, slice, struct, \nHere can do some optimization here, so you can self.compile... calls rewritten by bytedance team.",
+      "line": 499
     }
   ],
   "ref": "dev"
