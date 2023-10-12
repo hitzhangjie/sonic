@@ -4,7 +4,7 @@
   "steps": [
     {
       "file": "api.go",
-      "description": "API is very user-friendly, it's the same as go encoding/json.Marshal, \nso you can just change the importPath from encoding/json to github.com/bytedance/sonic.\n\noptimization: \n1. avoid enoders frequently function calls, by creating an _Encoder function by JIT.\n2. when generating JSON (marshaling), there's no SIMD used. SIMD is used during parsing JSON (unmarshaling)?",
+      "description": "API is very user-friendly, it's the same as go encoding/json.Marshal, \nso you can just change the importPath from encoding/json to github.com/bytedance/sonic.\n\noptimization: \n1. avoid enoders frequently function calls, by creating an _Encoder function by JIT.\n2. runtime dispatcher, to determine if use AVX, AVX2, SSE...",
       "line": 152
     },
     {
