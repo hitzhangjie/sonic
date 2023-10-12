@@ -4,7 +4,7 @@
   "steps": [
     {
       "file": "api.go",
-      "description": "API is very user-friendly, it's the same as go encoding/json.Marshal, \nso you can just change the importPath from encoding/json to github.com/bytedance/sonic.",
+      "description": "API is very user-friendly, it's the same as go encoding/json.Marshal, \nso you can just change the importPath from encoding/json to github.com/bytedance/sonic.\n\noptimization: \n1. avoid enoders frequently function calls, by creating an _Encoder function by JIT.\n2. when generating JSON (marshaling), there's no SIMD used. SIMD is used during parsing JSON (unmarshaling)?",
       "line": 152
     },
     {
@@ -73,11 +73,6 @@
       "line": 133
     },
     {
-      "file": "internal/encoder/assembler_regabi_amd64.go",
-      "description": "`(*_Assembler).compile()` converts the intermediate instructions to amd64 native instructions. These instructions is the encode function, which can be called.\n\nSo you can see, it put all encoders (functions) in go encoding/json for different element types into one single function. By this way, the function call cost is eliminated.\n\nps: And in previous go versions, the function call passes arguments by stack memory rather than registers, it's slow.",
-      "line": 205
-    },
-    {
       "file": "internal/encoder/compiler.go",
       "description": "`compile` create the _Encoder function and compile it into ASM instructions",
       "line": 431
@@ -116,6 +111,31 @@
       "file": "internal/encoder/compiler.go",
       "description": "For string, array, interface, map, ptr, slice, struct, \nHere can do some optimization here, so you can self.compile... calls rewritten by bytedance team.",
       "line": 499
+    },
+    {
+      "file": "internal/jit/assembler_amd64.go",
+      "description": "`build` build the function which contains the prologue, body, epilogue instructions, then assemble it into native instructions.",
+      "line": 227
+    },
+    {
+      "file": "internal/jit/assembler_amd64.go",
+      "description": "self.build()->self.f()->self.compile",
+      "line": 243
+    },
+    {
+      "file": "internal/encoder/assembler_regabi_amd64.go",
+      "description": "self.build()->self.f()->self.compile\n\n`(*_Assembler).compile()`, before calling this, we only get the function body intermediate instructions, \nself.compile() will insert function prologue, body and epilogue, then these instructions will be assembled to native instructions later by `self.assemble()`.\n\nAfter all this actions, we create a function `encode_xxxx` which can be called.\n\nSo you can see, it put all encoders (functions) in go encoding/json for different element types into one single function. By this way, the function call cost is eliminated.\n\nps: And in previous go versions, the function call passes arguments by stack memory rather than registers, it's slow.",
+      "line": 205
+    },
+    {
+      "file": "internal/jit/assembler_amd64.go",
+      "description": "`self.assemble` to assemble the Plan9 instructions into amd64 native instructions.",
+      "line": 245
+    },
+    {
+      "file": "internal/jit/backend.go",
+      "description": "call the assembler to assemble the Plan9 instructions to amd64 native instructions.\n\nsee: github.com/twitchyliquid64/golang-asm",
+      "line": 118
     }
   ],
   "ref": "dev"
