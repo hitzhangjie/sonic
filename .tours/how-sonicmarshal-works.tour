@@ -73,6 +73,11 @@
       "line": 133
     },
     {
+      "file": "internal/encoder/pools.go",
+      "description": "`newCompiler().compile(...)` create the encode function body instructions (Plan9 instructions).",
+      "line": 134
+    },
+    {
       "file": "internal/encoder/compiler.go",
       "description": "`compile` create the _Encoder function and compile it into ASM instructions",
       "line": 431
@@ -113,14 +118,14 @@
       "line": 499
     },
     {
-      "file": "internal/jit/assembler_amd64.go",
-      "description": "`build` build the function which contains the prologue, body, epilogue instructions, then assemble it into native instructions.",
-      "line": 227
+      "file": "internal/encoder/pools.go",
+      "description": "`as.Load() create the complete encode function instructions, including prologue and epilogue. And this also assemble the Plan9 instructions to amd64 native instructions",
+      "line": 139
     },
     {
       "file": "internal/jit/assembler_amd64.go",
-      "description": "self.build()->self.f()->self.compile",
-      "line": 243
+      "description": "`build` build the function which contains the prologue, body, epilogue instructions, then assemble it into native instructions.",
+      "line": 227
     },
     {
       "file": "internal/encoder/assembler_regabi_amd64.go",
