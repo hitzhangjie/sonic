@@ -1,0 +1,42 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "how sonic.Unmarshal works?",
+  "steps": [
+    {
+      "file": "api.go",
+      "description": "`sonic.Unmarshal` is user-friendly, it is equilavent to go `encoding/json.Unmarshal`.",
+      "line": 164
+    },
+    {
+      "file": "api.go",
+      "description": "`sonic.Unmarshal` behavior can be controled by some flags which is configured in `ConfigDefault`.\n\n`ConfigDefault` is an instance of interface `API` to limit accessible methods.",
+      "line": 165
+    },
+    {
+      "file": "sonic.go",
+      "description": "`frozenConfig.Unmarshal` unmarshal `buf` into `val`, which must be a pointer to value.",
+      "line": 115
+    },
+    {
+      "file": "sonic.go",
+      "description": "`frozenConfig.UnmarshalFromString` create a decoder to decode `buf` into `val`.\n\nHere `dec.Decode(val)` works similarly to `enc.Encode(val)`, it first create a decoder function by JIT, then cache it.\nThis function also removes the too many function calls existed in go encoding/json.",
+      "line": 101
+    },
+    {
+      "file": "internal/decoder/decoder.go",
+      "description": "`decodeTypedPointer` dives into the internals.",
+      "line": 142
+    },
+    {
+      "file": "internal/decoder/primitives.go",
+      "description": "`findOrCompile` find the relevant decoder function, if not existed in cache, then create it by JIT.",
+      "line": 29
+    },
+    {
+      "file": "internal/decoder/primitives.go",
+      "description": "`fn(...)` Do the real decoding logic.",
+      "line": 34
+    }
+  ],
+  "ref": "dev"
+}
